@@ -1,0 +1,6 @@
+[submodule "base/sdk"]
+	path = base/sdk
+	url = https://github.com/bigclownlabs/bc-core-module-sdk.git
+[submodule "remote/sdk"]
+	path = remote/sdk
+	url = https://github.com/bigclownlabs/bc-core-module-sdk.git
