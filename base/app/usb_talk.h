@@ -35,8 +35,4 @@ bool usb_talk_payload_get_data(usb_talk_payload_t *payload, const char *key, uin
 bool usb_talk_payload_get_enum(usb_talk_payload_t *payload, const char *key, int *value, ...);
 bool usb_talk_payload_get_uint(usb_talk_payload_t *payload, const char *key, int *value);
 
-//void usb_talk_publish_led_strip_config(const char *sufix);
-//void usb_talk_received_data(uint8_t *buffer, size_t length);
-//void usb_talk_publish_input_change(const char *prefix, uint16_t *event_count);
-
 #endif /* _USB_TALK_H */

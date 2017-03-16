@@ -1,11 +1,9 @@
 #!/bin/bash
-set -o xtrace
+set -eu -o xtrace
+
+make -C base release
+make -C remote release
 
 mkdir -p out
-cd base
-make
-cp out/firmware.bin ../out/firmware-base.bin
-cd ..
-cd remote
-make
-cp out/firmware.bin ../out/firmware-remote.bin
+cp base/out/firmware.bin out/firmware-base.bin
+cp remote/out/firmware.bin out/firmware-remote.bin

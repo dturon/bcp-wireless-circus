@@ -54,16 +54,6 @@ void application_init(void)
 
     bc_led_strip_init(&led_strip, bc_module_power_get_led_strip_driver(), &led_strip_buffer);
 
-    usb_talk_init();
-
-    usb_talk_sub(PREFIX_BASE "/light/-/set", light_set);
-    usb_talk_sub(PREFIX_BASE "/light/-/get", light_get);
-    usb_talk_sub(PREFIX_BASE "/relay/-/set", relay_set);
-    usb_talk_sub(PREFIX_BASE "/relay/-/get", relay_get);
-    usb_talk_sub(PREFIX_BASE "/led-strip/-/set", led_strip_set);
-    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/set", led_strip_config_set);
-    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/get", led_strip_config_get);
-
     static bc_button_t button;
     bc_button_init(&button, BC_GPIO_BUTTON, BC_GPIO_PULL_DOWN, false);
     bc_button_set_event_handler(&button, button_event_handler, NULL);
@@ -175,6 +165,16 @@ void application_init(void)
     bc_tag_barometer_set_update_interval(&barometer_tag_1, UPDATE_INTERVAL);
     static uint8_t barometer_tag_1_i2c = (BC_I2C_I2C1 << 7) | 0x60;
     bc_tag_barometer_set_event_handler(&barometer_tag_1, barometer_tag_event_handler, &barometer_tag_1_i2c);
+
+    usb_talk_init();
+
+    usb_talk_sub(PREFIX_BASE "/light/-/set", light_set);
+    usb_talk_sub(PREFIX_BASE "/light/-/get", light_get);
+    usb_talk_sub(PREFIX_BASE "/relay/-/set", relay_set);
+    usb_talk_sub(PREFIX_BASE "/relay/-/get", relay_get);
+    usb_talk_sub(PREFIX_BASE "/led-strip/-/set", led_strip_set);
+    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/set", led_strip_config_set);
+    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/get", led_strip_config_get);
 }
 
 void application_task(void)
@@ -381,6 +381,8 @@ static void relay_set(usb_talk_payload_t *payload)
     }
 
     bc_module_power_relay_set_state(state);
+
+    usb_talk_publish_relay(PREFIX_BASE, &state);
 }
 
 static void relay_get(usb_talk_payload_t *payload)
