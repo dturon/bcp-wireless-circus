@@ -10,7 +10,7 @@
 #define USB_TALK_TOKEN_PAYLOAD_KEY   3
 #define USB_TALK_TOKEN_PAYLOAD_VALUE 4
 
-#define USB_TALK_SUBSCRIBES 32
+#define USB_TALK_SUBSCRIBES 16
 
 static struct
 {
