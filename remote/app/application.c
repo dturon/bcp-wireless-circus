@@ -115,6 +115,12 @@ void application_init(void)
     static uint8_t barometer_tag_1_i2c = (BC_I2C_I2C1 << 7) | 0x60;
     bc_tag_barometer_set_event_handler(&barometer_tag_1, barometer_tag_event_handler, &barometer_tag_1_i2c);
 
+    //----------------------------
+
+    bc_module_co2_init();
+    bc_module_co2_set_update_interval(UPDATE_INTERVAL);
+    bc_module_co2_set_event_handler(co2_event_handler, NULL);
+
 }
 
 void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
@@ -207,4 +213,18 @@ void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_even
 
     bc_radio_pub_barometer(*(uint8_t *)event_param, &pascal, &meter);
 
+}
+
+void co2_event_handler(bc_module_co2_event_t event, void *event_param)
+{
+    (void) event_param;
+    int16_t value;
+
+    if (event == BC_MODULE_CO2_EVENT_UPDATE)
+    {
+        if (bc_module_co2_get_concentration(&value))
+        {
+            bc_radio_pub_co2(&value);
+        }
+    }
 }
