@@ -34,47 +34,87 @@ Firmware for projects
 
 ### MQTT
 
+#### LED
+
+  * On
+    ```
+    mosquitto_pub -t "node/base/led/-/state/set" -m true
+    ```
+  * Off
+    ```
+    mosquitto_pub -t "node/base/led/-/state/set" -m false
+    ```
+  * Get state
+    ```
+    mosquitto_pub -t "node/base/led/-/state/get" -n
+    ```
+
 ##### LED strip
 
   * On
     ```
-    mosquitto_pub -t "nodes/base/light/-/set" -m '{"state": true}'
+    mosquitto_pub -t "node/base/light/-/state/set" -m true
     ```
   * Off
     ```
-    mosquitto_pub -t "nodes/base/light/-/set" -m '{"state": false}'
+    mosquitto_pub -t "node/base/light/-/state/set" -m false
     ```
   * Get state
     ```
-    mosquitto_pub -t "nodes/base/light/-/get" -m '{}'
+    mosquitto_pub -t "node/base/light/-/state/get" -n
     ```
   * For 144 x RGBW LED strip, set all the lights on the red, data are encoded in base64
     ```
-    mosquitto_pub -t 'nodes/base/led-strip/-/set' -m  '{"pixels": "/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA"}'
+    mosquitto_pub -t "node/base/led-strip/-/framebuffer/set" -m '"/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA"'
     ```
   * Config
     * [LED Strip RGBW 1m 144 LEDs](https://shop.bigclown.com/products/led-stripe-rgbw-1m-144leds-glue)
       ```
-      mosquitto_pub -t 'nodes/base/led-strip/-/config/set' -m '{"mode": "rgbw", "count": 144}'
+      mosquitto_pub -t "node/base/led-strip/-/config/set"  -m '{"type": "rgbw", "count": 144}'
       ```
     * [LED Strip RGB 5m 150 LEDs](https://shop.bigclown.com/products/led-stripe-5m)
       ```
-      mosquitto_pub -t 'nodes/base/led-strip/-/config/set' -m '{"mode": "rgb", "count": 150}'
+      mosquitto_pub -t "node/base/led-strip/-/config/set"  -m '{"type": "rgb", "count": 150}'
       ```
 
 #### Relátko na power modulu
   * On
     ```
-    mosquitto_pub -t "nodes/base/relay/-/set" -m '{"state": true}'
+    mosquitto_pub -t 'node/base/relay/-/state/set' -m true
     ```
     > **Hint** First aid:
     If the relay not clicked, so make sure you join 5V DC adapter to Power Module
 
   * Off
     ```
-    mosquitto_pub -t "nodes/base/relay/-/set" -m '{"state": false}'
+    mosquitto_pub -t 'node/base/relay/-/state/set' -m false
     ```
   * Get state
     ```
-    mosquitto_pub -t "nodes/base/relay/-/get" -m '{}'
+    mosquitto_pub -t 'node/base/relay/-/state/get' -n
+    ```
+
+#### Relay module
+
+  * On
+    ```
+    mosquitto_pub -t "node/base/relay/0:0/state/set" -m true
+    mosquitto_pub -t "node/base/relay/0:1/state/set" -m true
+    ```
+  * Off
+    ```
+    mosquitto_pub -t "node/base/relay/0:0/state/set" -m false
+    mosquitto_pub -t "node/base/relay/0:1/state/set" -m false
+    ```
+  * Get state TODO:
+    ```
+    mosquitto_pub -t "node/base/relay/0:0/state/get" -n
+    mosquitto_pub -t "node/base/relay/0:1/state/get" -n
+    ```
+
+#### LCD module
+  * Write text, supported font size [14, 28], default font is 14
+    ```
+    mosquitto_pub -t "node/base/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "BigClown"}'
+    mosquitto_pub -t "node/base/lcd/-/text/set" -m '{"x": 5, "y": 40, "text": "BigClown", "font": 28}'
     ```
