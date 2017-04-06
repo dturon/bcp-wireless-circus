@@ -1,32 +1,35 @@
 #include <application.h>
-#include <jsmn.h>
-#include <bc_usb_cdc.h>
+#include <usb_talk.h>
 
 #define PREFIX_REMOTE "remote"
 #define PREFIX_BASE "base"
-#define UPDATE_INTERVAL 10000
+#define UPDATE_INTERVAL 5000
 
 #define MAX_PIXELS 150
 #define APPLICATION_TASK_ID 0
 
 static bc_led_t led;
+static bool led_state;
 
 static bool light;
-
 static uint8_t pixels[MAX_PIXELS * 4];
 static size_t pixels_length;
-
 static uint32_t _dma_buffer[MAX_PIXELS * 4 * 2];
-
 static bc_led_strip_buffer_t led_strip_buffer =
 {
     .type = BC_LED_STRIP_TYPE_RGBW,
     .count = MAX_PIXELS,
     .buffer = _dma_buffer
 };
-
 static bc_led_strip_t led_strip;
 static int led_strip_count = MAX_PIXELS;
+
+static struct {
+    bc_tick_t next_update;
+} lcd;
+
+static bc_module_relay_t relay_0_0;
+static bc_module_relay_t relay_0_1;
 
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void radio_event_handler(bc_radio_event_t event, void *event_param);
@@ -34,25 +37,40 @@ static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_tem
 static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_event_t event, void *event_param);
 static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_event_t event, void *event_param);
 static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_event_t event, void *event_param);
+static void co2_event_handler(bc_module_co2_event_t event, void *event_param);
+static void set_default_pixels(void);
 
+static void led_state_set(usb_talk_payload_t *payload, void *param);
+static void led_state_get(usb_talk_payload_t *payload, void *param);
 static void _light_set(bool state);
-static void light_set(usb_talk_payload_t *payload);
-static void light_get(usb_talk_payload_t *payload);
-static void relay_set(usb_talk_payload_t *payload);
-static void relay_get(usb_talk_payload_t *payload);
-static void led_strip_set(usb_talk_payload_t *payload);
-static void led_strip_set(usb_talk_payload_t *payload);
-static void led_strip_config_set(usb_talk_payload_t *payload);
-static void led_strip_config_get(usb_talk_payload_t *payload);
+static void light_state_set(usb_talk_payload_t *payload, void *param);
+static void light_state_get(usb_talk_payload_t *payload, void *param);
+static void relay_state_set(usb_talk_payload_t *payload, void *param);
+static void relay_state_get(usb_talk_payload_t *payload, void *param);
+static void module_relay_state_set(usb_talk_payload_t *payload, void *param);
+static void module_relay_state_get(usb_talk_payload_t *payload, void *param);
+static void led_strip_framebuffer_set(usb_talk_payload_t *payload, void *param);
+static void led_strip_framebuffer_set(usb_talk_payload_t *payload, void *param);
+static void led_strip_config_set(usb_talk_payload_t *payload, void *param);
+static void led_strip_config_get(usb_talk_payload_t *payload, void *param);
+static void lcd_text_set(usb_talk_payload_t *payload, void *param);
 
 void application_init(void)
 {
+
+    usb_talk_init();
 
     bc_led_init(&led, BC_GPIO_LED, false, false);
 
     bc_module_power_init();
 
+    set_default_pixels();
+
     bc_led_strip_init(&led_strip, bc_module_power_get_led_strip_driver(), &led_strip_buffer);
+
+    bc_module_lcd_init(&_bc_module_lcd_framebuffer);
+    bc_module_lcd_clear();
+    bc_module_lcd_update();
 
     static bc_button_t button;
     bc_button_init(&button, BC_GPIO_BUTTON, BC_GPIO_PULL_DOWN, false);
@@ -166,15 +184,34 @@ void application_init(void)
     static uint8_t barometer_tag_1_i2c = (BC_I2C_I2C1 << 7) | 0x60;
     bc_tag_barometer_set_event_handler(&barometer_tag_1, barometer_tag_event_handler, &barometer_tag_1_i2c);
 
-    usb_talk_init();
+    //----------------------------
 
-    usb_talk_sub(PREFIX_BASE "/light/-/set", light_set);
-    usb_talk_sub(PREFIX_BASE "/light/-/get", light_get);
-    usb_talk_sub(PREFIX_BASE "/relay/-/set", relay_set);
-    usb_talk_sub(PREFIX_BASE "/relay/-/get", relay_get);
-    usb_talk_sub(PREFIX_BASE "/led-strip/-/set", led_strip_set);
-    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/set", led_strip_config_set);
-    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/get", led_strip_config_get);
+    bc_module_co2_init();
+    bc_module_co2_set_update_interval(30000);
+    bc_module_co2_set_event_handler(co2_event_handler, NULL);
+
+    //----------------------------
+
+
+    bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
+    bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
+
+    usb_talk_sub(PREFIX_BASE "/led/-/state/set", led_state_set, NULL);
+    usb_talk_sub(PREFIX_BASE "/led/-/state/get", led_state_get, NULL);
+    usb_talk_sub(PREFIX_BASE "/light/-/state/set", light_state_set, NULL);
+    usb_talk_sub(PREFIX_BASE "/light/-/state/get", light_state_get, NULL);
+    usb_talk_sub(PREFIX_BASE "/led-strip/-/framebuffer/set", led_strip_framebuffer_set, NULL);
+    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/set", led_strip_config_set, NULL);
+    usb_talk_sub(PREFIX_BASE "/led-strip/-/config/get", led_strip_config_get, NULL);
+    usb_talk_sub(PREFIX_BASE "/relay/-/state/set", relay_state_set, NULL);
+    usb_talk_sub(PREFIX_BASE "/relay/-/state/get", relay_state_get, NULL);
+    usb_talk_sub(PREFIX_BASE "/relay/0:0/state/set", module_relay_state_set, &relay_0_0);
+    usb_talk_sub(PREFIX_BASE "/relay/0:0/state/get", module_relay_state_get, &relay_0_0);
+    usb_talk_sub(PREFIX_BASE "/relay/0:1/state/set", module_relay_state_set, &relay_0_1);
+    usb_talk_sub(PREFIX_BASE "/relay/0:1/state/get", module_relay_state_get, &relay_0_1);
+    usb_talk_sub(PREFIX_BASE "/lcd/-/text/set", lcd_text_set, NULL);
+
+    usb_talk_start();
 }
 
 void application_task(void)
@@ -186,6 +223,13 @@ void application_task(void)
     else
     {
         bc_scheduler_plan_current_now();
+    }
+
+    bc_tick_t now = bc_tick_get();
+    if (lcd.next_update < now)
+    {
+        bc_module_lcd_update();
+        lcd.next_update = now + 500;
     }
 }
 
@@ -262,6 +306,12 @@ void bc_radio_on_barometer(uint32_t *peer_device_address, uint8_t *i2c, float *p
     usb_talk_publish_barometer(PREFIX_REMOTE, i2c, pressure, altitude);
 }
 
+void bc_radio_on_co2(uint32_t *peer_device_address, int16_t *concentration)
+{
+    (void) peer_device_address;
+
+    usb_talk_publish_co2_concentation(PREFIX_REMOTE, concentration);
+}
 
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
 {
@@ -332,6 +382,56 @@ static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_baromet
 
 }
 
+void co2_event_handler(bc_module_co2_event_t event, void *event_param)
+{
+    (void) event_param;
+    int16_t value;
+
+    if (event == BC_MODULE_CO2_EVENT_UPDATE)
+    {
+        if (bc_module_co2_get_concentration(&value))
+        {
+            usb_talk_publish_co2_concentation(PREFIX_BASE, &value);
+        }
+    }
+}
+
+static void set_default_pixels(void)
+{
+    pixels_length = led_strip_buffer.type * led_strip_count;
+
+    memset(pixels, 0x00, sizeof(pixels));
+
+    int tmp = 0;
+
+    for (int i = 0; i < (int)pixels_length; i += led_strip_buffer.type)
+    {
+        pixels[i + (tmp++ % led_strip_buffer.type)] = 0x10;
+    }
+}
+
+static void led_state_set(usb_talk_payload_t *payload, void *param)
+{
+    (void) param;
+
+    if (!usb_talk_payload_get_bool(payload, &led_state))
+    {
+        return;
+    }
+
+    bc_led_set_mode(&led, led_state ? BC_LED_MODE_ON : BC_LED_MODE_OFF);
+
+    usb_talk_publish_led(PREFIX_BASE, &led_state);
+}
+
+static void led_state_get(usb_talk_payload_t *payload, void *param)
+{
+    (void) payload;
+    (void) param;
+
+    usb_talk_publish_led(PREFIX_BASE, &led_state);
+}
+
 static void _light_set(bool state)
 {
     light = state;
@@ -350,13 +450,17 @@ static void _light_set(bool state)
     bc_scheduler_plan_now(APPLICATION_TASK_ID);
 
     usb_talk_publish_light(PREFIX_BASE, &light);
+
+    led_state = state;
+    usb_talk_publish_led(PREFIX_BASE, &led_state);
 }
 
-static void light_set(usb_talk_payload_t *payload)
+static void light_state_set(usb_talk_payload_t *payload, void *param)
 {
+    (void) param;
     bool new_state;
 
-    if (!usb_talk_payload_get_bool(payload, "state", &new_state))
+    if (!usb_talk_payload_get_bool(payload, &new_state))
     {
         return;
     }
@@ -364,18 +468,20 @@ static void light_set(usb_talk_payload_t *payload)
     _light_set(new_state);
 }
 
-static void light_get(usb_talk_payload_t *payload)
+static void light_state_get(usb_talk_payload_t *payload, void *param)
 {
     (void) payload;
+    (void) param;
 
     usb_talk_publish_light(PREFIX_BASE, &light);
 }
 
-static void relay_set(usb_talk_payload_t *payload)
+static void relay_state_set(usb_talk_payload_t *payload, void *param)
 {
+    (void) param;
     bool state;
 
-    if (!usb_talk_payload_get_bool(payload, "state", &state))
+    if (!usb_talk_payload_get_bool(payload, &state))
     {
         return;
     }
@@ -385,20 +491,56 @@ static void relay_set(usb_talk_payload_t *payload)
     usb_talk_publish_relay(PREFIX_BASE, &state);
 }
 
-static void relay_get(usb_talk_payload_t *payload)
+static void relay_state_get(usb_talk_payload_t *payload, void *param)
 {
     (void) payload;
+    (void) param;
 
     bool state = bc_module_power_relay_get_state();
 
     usb_talk_publish_relay(PREFIX_BASE, &state);
 }
 
-static void led_strip_set(usb_talk_payload_t *payload)
+static void module_relay_state_set(usb_talk_payload_t *payload, void *param)
 {
+    (void) payload;
+
+    bc_module_relay_t *relay = (bc_module_relay_t *)param;
+
+    bool state;
+
+    if (!usb_talk_payload_get_bool(payload, &state))
+    {
+        return;
+    }
+
+    bc_module_relay_set_state(relay, state);
+
+    uint8_t number = (&relay_0_0 == relay) ? 0 : 1;
+    bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
+
+    usb_talk_publish_module_relay(PREFIX_BASE, &number, &relay_state);
+}
+
+static void module_relay_state_get(usb_talk_payload_t *payload, void *param)
+{
+    (void) payload;
+    bc_module_relay_t *relay = (bc_module_relay_t *)param;
+
+    bc_module_relay_state_t state = bc_module_relay_get_state(relay);
+
+    uint8_t number = (&relay_0_0 == relay) ? 0 : 1;
+
+    usb_talk_publish_module_relay(PREFIX_BASE, &number, &state);
+}
+
+static void led_strip_framebuffer_set(usb_talk_payload_t *payload, void *param)
+{
+    (void) param;
+
     size_t length = led_strip_count * led_strip_buffer.type;
 
-    if (usb_talk_payload_get_data(payload, "pixels", pixels, &length))
+    if (usb_talk_payload_get_data(payload, pixels, &length))
     {
         pixels_length = length;
 
@@ -409,27 +551,29 @@ static void led_strip_set(usb_talk_payload_t *payload)
 
         bc_scheduler_plan_now(APPLICATION_TASK_ID);
 
-        usb_talk_send_string("[\"base/led-strip/-/set/ok\", {}]\n");
+        usb_talk_send_string("[\"" PREFIX_BASE "/led-strip/-/framebuffer/set/ok\", null]\n");
     }
 
 }
 
-static void led_strip_config_set(usb_talk_payload_t *payload)
+static void led_strip_config_set(usb_talk_payload_t *payload, void *param)
 {
-    int mode;
+    (void) param;
+
+    int type;
     int count;
 
-    if (!usb_talk_payload_get_enum(payload, "mode", &mode, "rgb", "rgbw"))
+    if (!usb_talk_payload_get_key_enum(payload, "type", &type, "rgb", "rgbw"))
     {
         return;
     }
 
-    if (!usb_talk_payload_get_uint(payload, "count", &count))
+    if (!usb_talk_payload_get_key_int(payload, "count", &count))
     {
         return;
     }
 
-    if (count > MAX_PIXELS)
+    if ((count > MAX_PIXELS) || (count < 1))
     {
         return;
     }
@@ -438,21 +582,62 @@ static void led_strip_config_set(usb_talk_payload_t *payload)
 
     bc_led_strip_fill(&led_strip, 0x00000000);
 
-    led_strip_count = count;
-    led_strip_buffer.type = mode == 0 ? BC_LED_STRIP_TYPE_RGB : BC_LED_STRIP_TYPE_RGBW;
+    while(!bc_led_strip_write(&led_strip)) { }
+    while(!bc_led_strip_write(&led_strip)) { }
 
-    bc_led_strip_fill(&led_strip, 0x00000000);
+    led_strip_count = count;
+    led_strip_buffer.type = type == 0 ? BC_LED_STRIP_TYPE_RGB : BC_LED_STRIP_TYPE_RGBW;
+
+    set_default_pixels();
+    if (light)
+    {
+        bc_led_strip_set_rgbw_framebuffer(&led_strip, pixels, pixels_length);
+    }
 
     while(!bc_led_strip_write(&led_strip)) { }
 
-    usb_talk_publish_led_strip_config(PREFIX_BASE, "/set/ok", led_strip_buffer.type == BC_LED_STRIP_TYPE_RGB ? "rgb" : "rgbw", &led_strip_count);
+    usb_talk_publish_led_strip_config(PREFIX_BASE, led_strip_buffer.type == BC_LED_STRIP_TYPE_RGB ? "rgb" : "rgbw", &led_strip_count);
 
 }
 
-static void led_strip_config_get(usb_talk_payload_t *payload)
+static void led_strip_config_get(usb_talk_payload_t *payload, void *param)
 {
     (void) payload;
+    (void) param;
 
-    usb_talk_publish_led_strip_config(PREFIX_BASE, "", led_strip_buffer.type == BC_LED_STRIP_TYPE_RGB ? "rgb" : "rgbw", &led_strip_count);
+    usb_talk_publish_led_strip_config(PREFIX_BASE, led_strip_buffer.type == BC_LED_STRIP_TYPE_RGB ? "rgb" : "rgbw", &led_strip_count);
 
+}
+
+static void lcd_text_set(usb_talk_payload_t *payload, void *param)
+{
+    (void) param;
+    int x;
+    int y;
+    int font = 0;
+    char text[32];
+    size_t length = sizeof(text);
+    memset(text, 0, length);
+    if (!usb_talk_payload_get_key_int(payload, "x", &x))
+    {
+        return;
+    }
+    if (!usb_talk_payload_get_key_int(payload, "y", &y))
+    {
+        return;
+    }
+    if (!usb_talk_payload_get_key_string(payload, "text", text, &length))
+    {
+        return;
+    }
+
+    bc_module_lcd_set_font(&Font);
+
+    usb_talk_payload_get_key_int(payload, "font", &font);
+    if (font == 28)
+    {
+        bc_module_lcd_set_font(&FontBig);
+    }
+
+    bc_module_lcd_draw_string(x, y, text);
 }
