@@ -26,7 +26,60 @@ static int led_strip_count = MAX_PIXELS;
 
 static struct {
     bc_tick_t next_update;
+    bool mqtt;
+    struct {
+        float_t temperature;
+        float_t humidity;
+        float_t illuminance;
+        float_t pressure;
+        float_t altitude;
+        float_t co2_concentation;
+    } base;
+    struct {
+        float_t temperature;
+        float_t humidity;
+        float_t illuminance;
+        float_t pressure;
+        float_t altitude;
+        float_t co2_concentation;
+    } remote;
+    uint8_t cnt;
+    uint8_t page;
+
 } lcd;
+
+static struct {
+    char *title;
+    char *name0;
+    char *format0;
+    float_t *value0;
+    char *unit0;
+    char *name1;
+    char *format1;
+    float_t *value1;
+    char *unit1;
+
+} pages[] = {
+        {"Base",
+            "Temperature   ", "%.1f", &lcd.base.temperature, "\xb0" "C",
+            "Humidity      ", "%.1f", &lcd.base.humidity, "%"},
+        {"Base",
+            "CO2           ", "%.0f", &lcd.base.co2_concentation, "ppm",
+            "Illuminance   ", "%.1f", &lcd.base.illuminance, "lux"},
+        {"Base",
+            "Pressure      ", "%.0f", &lcd.base.pressure, "hPa",
+            "Altitude      ", "%.1f", &lcd.base.altitude, "m"},
+        {"Remote",
+            "Temperature   ", "%.1f", &lcd.remote.temperature, "\xb0" "C",
+            "Humidity      ", "%.1f", &lcd.remote.humidity, "%"},
+        {"Remote",
+            "CO2           ", "%.0f", &lcd.remote.co2_concentation, "ppm",
+            "Illuminance   ", "%.1f", &lcd.remote.illuminance, "lux"},
+        {"Remote",
+            "Pressure      ", "%.0f", &lcd.remote.pressure, "hPa",
+            "Altitude      ", "%.1f", &lcd.remote.altitude, "m"}
+};
+
 
 static bc_module_relay_t relay_0_0;
 static bc_module_relay_t relay_0_1;
@@ -57,7 +110,6 @@ static void lcd_text_set(usb_talk_payload_t *payload, void *param);
 
 void application_init(void)
 {
-
     usb_talk_init();
 
     bc_led_init(&led, BC_GPIO_LED, false, false);
@@ -211,6 +263,9 @@ void application_init(void)
     usb_talk_sub(PREFIX_BASE "/relay/0:1/state/get", module_relay_state_get, &relay_0_1);
     usb_talk_sub(PREFIX_BASE "/lcd/-/text/set", lcd_text_set, NULL);
 
+    memset(&lcd.base, 0xff, sizeof(lcd.base));
+    memset(&lcd.remote, 0xff, sizeof(lcd.remote));
+
     usb_talk_start();
 }
 
@@ -228,6 +283,42 @@ void application_task(void)
     bc_tick_t now = bc_tick_get();
     if (lcd.next_update < now)
     {
+        if (!lcd.mqtt && (lcd.cnt++ > 2))
+        {
+            char str[32];
+            int w;
+
+            bc_module_lcd_clear();
+
+            bc_module_lcd_set_font(&FontBig);
+            bc_module_lcd_draw_string(5, 5, pages[lcd.page].title);
+
+            bc_module_lcd_set_font(&Font);
+            bc_module_lcd_draw_string(10, 30, pages[lcd.page].name0);
+            bc_module_lcd_set_font(&FontBig);
+
+            snprintf(str, sizeof(str), pages[lcd.page].format0, *pages[lcd.page].value0);
+            w = bc_module_lcd_draw_string(15, 50, str);
+            bc_module_lcd_set_font(&Font);
+            w = bc_module_lcd_draw_string(w, 60, pages[lcd.page].unit0);
+
+            bc_module_lcd_set_font(&Font);
+            bc_module_lcd_draw_string(10, 80, pages[lcd.page].name1);
+            bc_module_lcd_set_font(&FontBig);
+
+            snprintf(str, sizeof(str), pages[lcd.page].format1, *pages[lcd.page].value1);
+            w = bc_module_lcd_draw_string(15, 100, str);
+            bc_module_lcd_set_font(&Font);
+
+            bc_module_lcd_draw_string(w, 110, pages[lcd.page].unit1);
+
+            lcd.cnt = 0;
+            if (++lcd.page == (sizeof(pages) / sizeof(pages[0])))
+            {
+                lcd.page = 0;
+            }
+        }
+
         bc_module_lcd_update();
         lcd.next_update = now + 500;
     }
@@ -281,6 +372,7 @@ void bc_radio_on_thermometer(uint32_t *peer_device_address, uint8_t *i2c, float 
     (void) peer_device_address;
 
     usb_talk_publish_thermometer(PREFIX_REMOTE, i2c, temperature);
+    lcd.remote.temperature = *temperature;
 }
 
 
@@ -289,7 +381,7 @@ void bc_radio_on_humidity(uint32_t *peer_device_address, uint8_t *i2c, float *pe
     (void) peer_device_address;
 
     usb_talk_publish_humidity_sensor(PREFIX_REMOTE, i2c, percentage);
-
+    lcd.remote.humidity = *percentage;
 }
 
 void bc_radio_on_lux_meter(uint32_t *peer_device_address, uint8_t *i2c, float *illuminance)
@@ -297,6 +389,7 @@ void bc_radio_on_lux_meter(uint32_t *peer_device_address, uint8_t *i2c, float *i
     (void) peer_device_address;
 
     usb_talk_publish_lux_meter(PREFIX_REMOTE, i2c, illuminance);
+    lcd.remote.illuminance = *illuminance;
 }
 
 void bc_radio_on_barometer(uint32_t *peer_device_address, uint8_t *i2c, float *pressure, float *altitude)
@@ -304,6 +397,8 @@ void bc_radio_on_barometer(uint32_t *peer_device_address, uint8_t *i2c, float *p
     (void) peer_device_address;
 
     usb_talk_publish_barometer(PREFIX_REMOTE, i2c, pressure, altitude);
+    lcd.remote.pressure = *pressure / 100;
+    lcd.remote.altitude = *altitude;
 }
 
 void bc_radio_on_co2(uint32_t *peer_device_address, int16_t *concentration)
@@ -311,6 +406,7 @@ void bc_radio_on_co2(uint32_t *peer_device_address, int16_t *concentration)
     (void) peer_device_address;
 
     usb_talk_publish_co2_concentation(PREFIX_REMOTE, concentration);
+    lcd.remote.co2_concentation = *concentration;
 }
 
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
@@ -325,6 +421,7 @@ static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_tem
     if (bc_tag_temperature_get_temperature_celsius(self, &value))
     {
         usb_talk_publish_thermometer(PREFIX_BASE, (uint8_t *)event_param, &value);
+        lcd.base.temperature = value;
     }
 }
 
@@ -340,6 +437,7 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
     if (bc_tag_humidity_get_humidity_percentage(self, &value))
     {
         usb_talk_publish_humidity_sensor(PREFIX_BASE, (uint8_t *)event_param, &value);
+        lcd.base.humidity = value;
     }
 }
 
@@ -355,6 +453,7 @@ static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_e
     if (bc_tag_lux_meter_get_luminosity_lux(self, &value))
     {
         usb_talk_publish_lux_meter(PREFIX_BASE, (uint8_t *)event_param, &value);
+        lcd.base.illuminance = value;
     }
 }
 
@@ -379,6 +478,8 @@ static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_baromet
     }
 
     usb_talk_publish_barometer(PREFIX_BASE, (uint8_t *)event_param, &pascal, &meter);
+    lcd.base.pressure = pascal / 100;
+    lcd.base.altitude = meter;
 
 }
 
@@ -392,6 +493,7 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
         if (bc_module_co2_get_concentration(&value))
         {
             usb_talk_publish_co2_concentation(PREFIX_BASE, &value);
+            lcd.base.co2_concentation = value;
         }
     }
 }
@@ -629,6 +731,12 @@ static void lcd_text_set(usb_talk_payload_t *payload, void *param)
     if (!usb_talk_payload_get_key_string(payload, "text", text, &length))
     {
         return;
+    }
+
+    if (!lcd.mqtt)
+    {
+        bc_module_lcd_clear();
+        lcd.mqtt = true;
     }
 
     bc_module_lcd_set_font(&Font);
