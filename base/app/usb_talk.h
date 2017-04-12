@@ -3,6 +3,7 @@
 
 #include <bc_common.h>
 #include <jsmn.h>
+#include <bc_module_relay.h>
 
 #define USB_TALK_UINT_VALUE_NULL -1
 #define USB_TALK_UINT_VALUE_INVALID -2
@@ -27,6 +28,7 @@ void usb_talk_publish_lux_meter(const char *prefix, uint8_t *i2c, float *illumin
 void usb_talk_publish_barometer(const char *prefix, uint8_t *i2c, float *pascal, float *altitude);
 void usb_talk_publish_light(const char *prefix, bool *state);
 void usb_talk_publish_relay(const char *prefix, bool *state);
+void usb_talk_publish_module_relay(const char *prefix, uint8_t *i2c, bc_module_relay_state_t *state);
 void usb_talk_publish_led_strip_config(const char *prefix, const char *sufix, const char *mode, int *count);
 
 bool usb_talk_is_string_token_equal(const char *buffer, jsmntok_t *token, const char *string);

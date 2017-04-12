@@ -1,6 +1,7 @@
 #include <application.h>
 #include <jsmn.h>
 #include <bc_usb_cdc.h>
+#include <usb_talk.h>
 
 #define PREFIX_REMOTE "remote"
 #define PREFIX_BASE "base"
@@ -28,6 +29,9 @@ static bc_led_strip_buffer_t led_strip_buffer =
 static bc_led_strip_t led_strip;
 static int led_strip_count = MAX_PIXELS;
 
+static bc_module_relay_t relay_0_3b;
+static bc_module_relay_t relay_0_3f;
+
 static void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param);
 static void radio_event_handler(bc_radio_event_t event, void *event_param);
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param);
@@ -44,6 +48,10 @@ static void led_strip_set(usb_talk_payload_t *payload);
 static void led_strip_set(usb_talk_payload_t *payload);
 static void led_strip_config_set(usb_talk_payload_t *payload);
 static void led_strip_config_get(usb_talk_payload_t *payload);
+static void module_relay_3b_set(usb_talk_payload_t *payload);
+static void module_relay_3b_get(usb_talk_payload_t *payload);
+static void module_relay_3f_set(usb_talk_payload_t *payload);
+static void module_relay_3f_get(usb_talk_payload_t *payload);
 
 void application_init(void)
 {
@@ -166,6 +174,9 @@ void application_init(void)
     static uint8_t barometer_tag_1_i2c = (BC_I2C_I2C1 << 7) | 0x60;
     bc_tag_barometer_set_event_handler(&barometer_tag_1, barometer_tag_event_handler, &barometer_tag_1_i2c);
 
+    bc_module_relay_init(&relay_0_3b, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
+    bc_module_relay_init(&relay_0_3f, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
+
     usb_talk_init();
 
     usb_talk_sub(PREFIX_BASE "/light/-/set", light_set);
@@ -175,6 +186,10 @@ void application_init(void)
     usb_talk_sub(PREFIX_BASE "/led-strip/-/set", led_strip_set);
     usb_talk_sub(PREFIX_BASE "/led-strip/-/config/set", led_strip_config_set);
     usb_talk_sub(PREFIX_BASE "/led-strip/-/config/get", led_strip_config_get);
+    usb_talk_sub(PREFIX_BASE "/relay/i2c0-3b/set", module_relay_3b_set);
+    usb_talk_sub(PREFIX_BASE "/relay/i2c0-3b/get", module_relay_3b_get);
+    usb_talk_sub(PREFIX_BASE "/relay/i2c0-3f/set", module_relay_3f_set);
+    usb_talk_sub(PREFIX_BASE "/relay/i2c0-3f/get", module_relay_3f_get);
 }
 
 void application_task(void)
@@ -455,4 +470,55 @@ static void led_strip_config_get(usb_talk_payload_t *payload)
 
     usb_talk_publish_led_strip_config(PREFIX_BASE, "", led_strip_buffer.type == BC_LED_STRIP_TYPE_RGB ? "rgb" : "rgbw", &led_strip_count);
 
+}
+
+static void module_relay_3b_set(usb_talk_payload_t *payload)
+{
+    bool state;
+
+    if (!usb_talk_payload_get_bool(payload, "state", &state))
+    {
+        return;
+    }
+
+    bc_module_relay_set_state(&relay_0_3b, state);
+
+    uint8_t i2c = 0x3b;
+    bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
+    usb_talk_publish_module_relay(PREFIX_BASE, &i2c, &relay_state);
+}
+
+
+static void module_relay_3b_get(usb_talk_payload_t *payload)
+{
+    (void) payload;
+
+    bc_module_relay_state_t state = bc_module_relay_get_state(&relay_0_3b);
+    uint8_t i2c = 0x3b;
+    usb_talk_publish_module_relay(PREFIX_BASE, &i2c, &state);
+}
+
+static void module_relay_3f_set(usb_talk_payload_t *payload)
+{
+    bool state;
+
+    if (!usb_talk_payload_get_bool(payload, "state", &state))
+    {
+        return;
+    }
+
+    bc_module_relay_set_state(&relay_0_3f, state);
+
+    uint8_t i2c = 0x3f;
+    bc_module_relay_state_t relay_state = state ? BC_MODULE_RELAY_STATE_TRUE : BC_MODULE_RELAY_STATE_FALSE;
+    usb_talk_publish_module_relay(PREFIX_BASE, &i2c, &relay_state);
+}
+
+static void module_relay_3f_get(usb_talk_payload_t *payload)
+{
+    (void) payload;
+
+    bc_module_relay_state_t state = bc_module_relay_get_state(&relay_0_3f);
+    uint8_t i2c = 0x3f;
+    usb_talk_publish_module_relay(PREFIX_BASE, &i2c, &state);
 }

@@ -10,7 +10,7 @@
 #define USB_TALK_TOKEN_PAYLOAD_KEY   3
 #define USB_TALK_TOKEN_PAYLOAD_VALUE 4
 
-#define USB_TALK_SUBSCRIBES 10
+#define USB_TALK_SUBSCRIBES 16
 
 static struct
 {
@@ -120,6 +120,21 @@ void usb_talk_publish_relay(const char *prefix, bool *state)
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
+void usb_talk_publish_module_relay(const char *prefix, uint8_t *i2c, bc_module_relay_state_t *state)
+{
+    if (*state == BC_MODULE_RELAY_STATE_UNKNOWN)
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer), "[\"%s/relay/i2c%d-%02x\", {\"state\": null}]\n",
+                prefix, ((*i2c & 0x80) >> 7), (*i2c & ~0x80));
+    }
+    else
+    {
+        snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer), "[\"%s/relay/i2c%d-%02x\", {\"state\": %s}]\n",
+                prefix, ((*i2c & 0x80) >> 7), (*i2c & ~0x80), *state == BC_MODULE_RELAY_STATE_TRUE ? "true" : "false");
+    }
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
 
 void usb_talk_publish_led_strip_config(const char *prefix, const char *sufix, const char *mode, int *count)
 {
