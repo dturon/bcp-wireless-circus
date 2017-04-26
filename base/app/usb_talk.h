@@ -18,7 +18,6 @@ typedef struct
 typedef void (*usb_talk_sub_callback_t)(usb_talk_payload_t *payload, void *param);
 
 void usb_talk_init(void);
-void usb_talk_start(void);
 void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param);
 void usb_talk_send_string(const char *buffer);
 void usb_talk_publish_led(const char *prefix, bool *state);
@@ -27,11 +26,12 @@ void usb_talk_publish_thermometer(const char *prefix, uint8_t *i2c, float *tempe
 void usb_talk_publish_humidity_sensor(const char *prefix, uint8_t *i2c, float *relative_humidity);
 void usb_talk_publish_lux_meter(const char *prefix, uint8_t *i2c, float *illuminance);
 void usb_talk_publish_barometer(const char *prefix, uint8_t *i2c, float *pascal, float *altitude);
-void usb_talk_publish_co2_concentation(const char *prefix, int16_t *concentration);
+void usb_talk_publish_co2_concentation(const char *prefix, float *concentration);
 void usb_talk_publish_light(const char *prefix, bool *state);
 void usb_talk_publish_relay(const char *prefix, bool *state);
 void usb_talk_publish_module_relay(const char *prefix, uint8_t *number, bc_module_relay_state_t *state);
 void usb_talk_publish_led_strip_config(const char *prefix, const char *mode, int *count);
+void usb_talk_publish_encoder(const char *prefix, int *increment);
 
 bool usb_talk_payload_get_bool(usb_talk_payload_t *payload, bool *value);
 bool usb_talk_payload_get_key_bool(usb_talk_payload_t *payload, const char *key, bool *value);

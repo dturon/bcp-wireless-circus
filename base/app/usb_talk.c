@@ -43,11 +43,6 @@ void usb_talk_init(void)
     bc_scheduler_register(_usb_talk_task, NULL, 0);
 }
 
-void usb_talk_start(void)
-{
-    bc_usb_cdc_start();
-}
-
 void usb_talk_sub(const char *topic, usb_talk_sub_callback_t callback, void *param)
 {
     if (_usb_talk.subscribes_length >= USB_TALK_SUBSCRIBES){
@@ -148,10 +143,10 @@ void usb_talk_publish_barometer(const char *prefix, uint8_t *i2c, float *pressur
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
 
-void usb_talk_publish_co2_concentation(const char *prefix, int16_t *concentration)
+void usb_talk_publish_co2_concentation(const char *prefix, float *concentration)
 {
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
-                "[\"%s/co2-meter/-/concentration\", %" PRIu16 "]\n",
+                "[\"%s/co2-meter/-/concentration\", %.0f]\n",
                 prefix, *concentration);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
@@ -198,6 +193,15 @@ void usb_talk_publish_led_strip_config(const char *prefix, const char *mode, int
     snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
                 "[\"%s/led-strip/-/config\", {\"mode\": \"%s\", \"count\": %d}]\n",
                 prefix, mode, *count );
+
+    usb_talk_send_string((const char *) _usb_talk.tx_buffer);
+}
+
+void usb_talk_publish_encoder(const char *prefix, int *increment)
+{
+    snprintf(_usb_talk.tx_buffer, sizeof(_usb_talk.tx_buffer),
+             "[\"%s/encoder/-/increment\", %d]\n",
+             prefix, *increment);
 
     usb_talk_send_string((const char *) _usb_talk.tx_buffer);
 }
