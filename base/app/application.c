@@ -91,6 +91,7 @@ static void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_
 static void lux_meter_event_handler(bc_tag_lux_meter_t *self, bc_tag_lux_meter_event_t event, void *event_param);
 static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_event_t event, void *event_param);
 static void co2_event_handler(bc_module_co2_event_t event, void *event_param);
+static void encoder_event_handler(bc_module_encoder_event_t event, void *param);
 static void set_default_pixels(void);
 
 static void led_state_set(usb_talk_payload_t *payload, void *param);
@@ -242,11 +243,16 @@ void application_init(void)
     bc_module_co2_set_update_interval(30000);
     bc_module_co2_set_event_handler(co2_event_handler, NULL);
 
-    //----------------------------
+    // ---------------------------
 
+    bc_module_encoder_init();
+    bc_module_encoder_set_event_handler(encoder_event_handler, NULL);
+
+    //----------------------------
 
     bc_module_relay_init(&relay_0_0, BC_MODULE_RELAY_I2C_ADDRESS_DEFAULT);
     bc_module_relay_init(&relay_0_1, BC_MODULE_RELAY_I2C_ADDRESS_ALTERNATE);
+
 
     usb_talk_sub(PREFIX_BASE "/led/-/state/set", led_state_set, NULL);
     usb_talk_sub(PREFIX_BASE "/led/-/state/get", led_state_get, NULL);
@@ -265,8 +271,6 @@ void application_init(void)
 
     memset(&lcd.base, 0xff, sizeof(lcd.base));
     memset(&lcd.remote, 0xff, sizeof(lcd.remote));
-
-    usb_talk_start();
 }
 
 void application_task(void)
@@ -290,25 +294,25 @@ void application_task(void)
 
             bc_module_lcd_clear();
 
-            bc_module_lcd_set_font(&FontBig);
+            bc_module_lcd_set_font(&bc_font_ubuntu_24);
             bc_module_lcd_draw_string(5, 5, pages[lcd.page].title);
 
-            bc_module_lcd_set_font(&Font);
+            bc_module_lcd_set_font(&bc_font_ubuntu_15);
             bc_module_lcd_draw_string(10, 30, pages[lcd.page].name0);
-            bc_module_lcd_set_font(&FontBig);
+            bc_module_lcd_set_font(&bc_font_ubuntu_24);
 
             snprintf(str, sizeof(str), pages[lcd.page].format0, *pages[lcd.page].value0);
             w = bc_module_lcd_draw_string(15, 50, str);
-            bc_module_lcd_set_font(&Font);
+            bc_module_lcd_set_font(&bc_font_ubuntu_15);
             w = bc_module_lcd_draw_string(w, 60, pages[lcd.page].unit0);
 
-            bc_module_lcd_set_font(&Font);
+            bc_module_lcd_set_font(&bc_font_ubuntu_15);
             bc_module_lcd_draw_string(10, 80, pages[lcd.page].name1);
-            bc_module_lcd_set_font(&FontBig);
+            bc_module_lcd_set_font(&bc_font_ubuntu_24);
 
             snprintf(str, sizeof(str), pages[lcd.page].format1, *pages[lcd.page].value1);
             w = bc_module_lcd_draw_string(15, 100, str);
-            bc_module_lcd_set_font(&Font);
+            bc_module_lcd_set_font(&bc_font_ubuntu_15);
 
             bc_module_lcd_draw_string(w, 110, pages[lcd.page].unit1);
 
@@ -401,12 +405,28 @@ void bc_radio_on_barometer(uint32_t *peer_device_address, uint8_t *i2c, float *p
     lcd.remote.altitude = *altitude;
 }
 
-void bc_radio_on_co2(uint32_t *peer_device_address, int16_t *concentration)
+void bc_radio_on_co2(uint32_t *peer_device_address, float *concentration)
 {
     (void) peer_device_address;
 
     usb_talk_publish_co2_concentation(PREFIX_REMOTE, concentration);
     lcd.remote.co2_concentation = *concentration;
+}
+
+void bc_radio_on_buffer(uint32_t *peer_device_address, uint8_t *buffer, size_t *length)
+{
+    if (*length < 1 + sizeof(int))
+    {
+        return;
+    }
+
+    if (buffer[0] == 0x00)
+    {
+        int increment;
+        memcpy(&increment, &buffer[1], sizeof(increment));
+
+        usb_talk_publish_encoder(PREFIX_REMOTE, &increment);
+    }
 }
 
 static void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperature_event_t event, void *event_param)
@@ -486,7 +506,7 @@ static void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_baromet
 void co2_event_handler(bc_module_co2_event_t event, void *event_param)
 {
     (void) event_param;
-    int16_t value;
+    float value;
 
     if (event == BC_MODULE_CO2_EVENT_UPDATE)
     {
@@ -495,6 +515,17 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
             usb_talk_publish_co2_concentation(PREFIX_BASE, &value);
             lcd.base.co2_concentation = value;
         }
+    }
+}
+
+static void encoder_event_handler(bc_module_encoder_event_t event, void *param)
+{
+    (void)param;
+
+    if (event == BC_MODULE_ENCODER_EVENT_ROTATION)
+    {
+        int increment = bc_module_encoder_get_increment();
+        usb_talk_publish_encoder(PREFIX_BASE, &increment);
     }
 }
 
@@ -738,13 +769,13 @@ static void lcd_text_set(usb_talk_payload_t *payload, void *param)
         bc_module_lcd_clear();
         lcd.mqtt = true;
     }
-
-    bc_module_lcd_set_font(&Font);
+// TODO
+    bc_module_lcd_set_font(&bc_font_ubuntu_15);
 
     usb_talk_payload_get_key_int(payload, "font", &font);
     if (font == 28)
     {
-        bc_module_lcd_set_font(&FontBig);
+        bc_module_lcd_set_font(&bc_font_ubuntu_28);
     }
 
     bc_module_lcd_draw_string(x, y, text);
