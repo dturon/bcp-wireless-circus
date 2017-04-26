@@ -121,6 +121,11 @@ void application_init(void)
     bc_module_co2_set_update_interval(UPDATE_INTERVAL);
     bc_module_co2_set_event_handler(co2_event_handler, NULL);
 
+    // ---------------------------
+
+    bc_module_encoder_init();
+    bc_module_encoder_set_event_handler(encoder_event_handler, NULL);
+
 }
 
 void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
@@ -218,7 +223,7 @@ void barometer_tag_event_handler(bc_tag_barometer_t *self, bc_tag_barometer_even
 void co2_event_handler(bc_module_co2_event_t event, void *event_param)
 {
     (void) event_param;
-    int16_t value;
+    float value;
 
     if (event == BC_MODULE_CO2_EVENT_UPDATE)
     {
@@ -226,5 +231,19 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
         {
             bc_radio_pub_co2(&value);
         }
+    }
+}
+
+void encoder_event_handler(bc_module_encoder_event_t event, void *param)
+{
+    (void)param;
+
+    if (event == BC_MODULE_ENCODER_EVENT_ROTATION)
+    {
+        int increment = bc_module_encoder_get_increment();
+        uint8_t buffer[1 + sizeof(increment)];
+        buffer[0] = 0x00;
+        memcpy(&buffer[1], &increment, sizeof(increment));
+        bc_radio_pub_buffer(&buffer, sizeof(buffer));
     }
 }
