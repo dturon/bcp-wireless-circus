@@ -749,9 +749,10 @@ static void lcd_text_set(usb_talk_payload_t *payload, void *param)
     (void) param;
     int x;
     int y;
-    int font = 0;
+    int font_size = 0;
     char text[32];
     size_t length = sizeof(text);
+
     memset(text, 0, length);
     if (!usb_talk_payload_get_key_int(payload, "x", &x))
     {
@@ -771,13 +772,44 @@ static void lcd_text_set(usb_talk_payload_t *payload, void *param)
         bc_module_lcd_clear();
         lcd.mqtt = true;
     }
-// TODO
-    bc_module_lcd_set_font(&bc_font_ubuntu_15);
 
-    usb_talk_payload_get_key_int(payload, "font", &font);
-    if (font == 28)
-    {
-        bc_module_lcd_set_font(&bc_font_ubuntu_28);
+    usb_talk_payload_get_key_int(payload, "font", &font_size);
+    switch (font_size) {
+        case 11:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_11);
+            break;
+        }
+        case 13:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_13);
+            break;
+        }
+        case 15:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_15);
+            break;
+        }
+        case 24:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_24);
+            break;
+        }
+        case 28:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_28);
+            break;
+        }
+        case 33:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_33);
+            break;
+        }
+        default:
+        {
+            bc_module_lcd_set_font(&bc_font_ubuntu_15);
+            break;
+        }
     }
 
     bc_module_lcd_draw_string(x, y, text);

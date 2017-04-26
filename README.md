@@ -122,7 +122,7 @@ Firmware for projects
     ```
 
 #### LCD module
-  * Write text, supported font size [14, 28], default font is 14
+  * Write text, supported font size [11, 13, 15, 24, 28, 33], default font is 15
     ```
     mosquitto_pub -t "node/base/lcd/-/text/set" -m '{"x": 5, "y": 10, "text": "BigClown"}'
     mosquitto_pub -t "node/base/lcd/-/text/set" -m '{"x": 5, "y": 40, "text": "BigClown", "font": 28}'
