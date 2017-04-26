@@ -17,6 +17,9 @@ Firmware for projects
 * 1x [Tag Module](https://shop.bigclown.com/products/tag-module)
 * 1x [BigClown Battery Module](https://shop.bigclown.com/products/battery-module)
 * Tags
+* It also supports
+    * 1x [CO2 Module](https://shop.bigclown.com/products/co2-module)
+    * 1x Encoder Module
 
 ![](images/unit-remote.png)
 
@@ -25,6 +28,12 @@ Firmware for projects
 * 1x [BigClown Power Module](https://shop.bigclown.com/products/power-module)
 * 1x [BigClown Base Module](https://shop.bigclown.com/products/base-module)
 * Tags
+* It also supports
+    * 1x [CO2 Module](https://shop.bigclown.com/products/co2-module)
+    * 2x [Relay Module](https://shop.bigclown.com/products/relay-module)
+    * 1x Encoder Module
+    * 1x LCD Display Module
+
 
 ![](images/unit-base.png)
 
