@@ -48,7 +48,7 @@ static struct {
 
 } lcd;
 
-static struct {
+static const struct {
     char *title;
     char *name0;
     char *format0;
@@ -415,6 +415,8 @@ void bc_radio_on_co2(uint32_t *peer_device_address, float *concentration)
 
 void bc_radio_on_buffer(uint32_t *peer_device_address, uint8_t *buffer, size_t *length)
 {
+    (void) peer_device_address;
+
     if (*length < 1 + sizeof(int))
     {
         return;

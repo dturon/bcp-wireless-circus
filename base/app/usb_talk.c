@@ -14,7 +14,7 @@
 
 static struct
 {
-    char tx_buffer[256];
+    char tx_buffer[128];
     char rx_buffer[1024];
     size_t rx_length;
     bool rx_error;
