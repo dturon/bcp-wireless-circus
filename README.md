@@ -7,29 +7,29 @@ Firmware for projects
 * [Workroom project](https://www.bigclown.com/project/lets-build-your-own-home-automation/)
 
 ## Tags
-* [Humidity Tag](https://obchod.bigclown.cz/products/humidity-tag)
-* [Lux Meter Tag](https://obchod.bigclown.cz/products/lux-meter-tag)
-* [Barometer Tag](https://obchod.bigclown.cz/products/barometr-tag)
-* [Temperature Tag](https://obchod.bigclown.cz/products/temperature-tag)
+* [Humidity Tag](https://shop.bigclown.com/products/humidity-tag)
+* [Lux Meter Tag](https://shop.bigclown.com/products/lux-meter-tag)
+* [Barometer Tag](https://shop.bigclown.com/products/barometr-tag)
+* [Temperature Tag](https://shop.bigclown.com/products/temperature-tag)
 
 ## Remote
-* 1x [BigClown Core Module](https://obchod.bigclown.cz/products/core-module)
-* 1x [Tag Module](https://obchod.bigclown.cz/products/tag-module)
-* 1x [BigClown Battery Module](https://obchod.bigclown.cz/products/battery-module)
+* 1x [BigClown Core Module](https://shop.bigclown.com/products/core-module)
+* 1x [Tag Module](https://shop.bigclown.com/products/tag-module)
+* 1x [BigClown Battery Module](https://shop.bigclown.com/products/battery-module)
 * Tags
 
 ![](images/unit-remote.png)
 
 ## Base
-* 1x [BigClown Core Module](https://obchod.bigclown.cz/products/core-module)
-* 1x [BigClown Power Module](https://obchod.bigclown.cz/products/power-module)
-* 1x [BigClown Base Module](https://obchod.bigclown.cz/products/base-module)
+* 1x [BigClown Core Module](https://shop.bigclown.com/products/core-module)
+* 1x [BigClown Power Module](https://shop.bigclown.com/products/power-module)
+* 1x [BigClown Base Module](https://shop.bigclown.com/products/base-module)
 * Tags
 
 ![](images/unit-base.png)
 
 ## Hub (Gateway)
-* 1x [BigClown Raspberry Pi](https://obchod.bigclown.cz/products/raspberry-pi-3-set)
+* 1x [BigClown Raspberry Pi](https://shop.bigclown.com/products/raspberry-pi-3-set)
 
 
 ### MQTT
