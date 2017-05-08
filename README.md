@@ -6,6 +6,13 @@ Firmware for projects
 * [Jednoduché programování domácí automatizace](https://doc.bigclown.cz/easy-programming.html)
 * [Workroom project](https://www.bigclown.com/project/lets-build-your-own-home-automation/)
 
+Download (with the correct version of SDK) and compile. Then firmware will be in folder `out`.
+```
+git clone --recursive https://github.com/bigclownlabs/bcp-wireless-circus.git
+cd bcp-wireless-circus
+./build.sh
+```
+
 ## Tags
 * [Humidity Tag](https://shop.bigclown.com/products/humidity-tag)
 * [Lux Meter Tag](https://shop.bigclown.com/products/lux-meter-tag)
@@ -86,7 +93,7 @@ Firmware for projects
       mosquitto_pub -t "node/base/led-strip/-/config/set"  -m '{"type": "rgb", "count": 150}'
       ```
 
-#### Relátko na power modulu
+#### Relay on Power module
   * On
     ```
     mosquitto_pub -t 'node/base/relay/-/state/set' -m true
